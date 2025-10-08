@@ -12,6 +12,7 @@ if f:
     out = df.groupby("購入者")[["S席","A席"]].sum().astype(int)
     out["合計枚数"] = out["S席"] + out["A席"]
     st.dataframe(out.sort_values("合計枚数", ascending=False))
-    st.download_button("CSVダウンロード", out.to_csv().encode("utf-8-sig"), file_name="集計結果.csv")
+    st.download_button("団員の配布数ランキング CSVダウンロード", out.to_csv().encode("utf-8-sig"), file_name="集計結果.csv")
+
 
 
