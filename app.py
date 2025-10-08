@@ -1,7 +1,7 @@
 import pandas as pd
 import streamlit as st
 
-st.title("TAO クーポン利用集計")
+st.title("TAO63 団員の配布数ランキング from teket CSV")
 
 f = st.file_uploader("販売履歴CSVを選択", type=["csv"])
 if f:
@@ -13,3 +13,4 @@ if f:
     out["合計枚数"] = out["S席"] + out["A席"]
     st.dataframe(out.sort_values("合計枚数", ascending=False))
     st.download_button("CSVダウンロード", out.to_csv().encode("utf-8-sig"), file_name="集計結果.csv")
+
