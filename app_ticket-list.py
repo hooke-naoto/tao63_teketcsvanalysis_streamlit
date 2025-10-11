@@ -109,9 +109,9 @@ def reduce_group(g):
     last_dt = g["_event_dt"].iloc[-1]
     last_dt_str = last_dt.strftime("%Y-%m-%d %H:%M") if hasattr(last_dt, "strftime") else str(last_dt)
     return pd.Series({
-        "席": key,
-        "キャンセル": "はい" if bool(g.iloc[-1].get("_is_cancel", False)) else "いいえ",
-        "経由": chain_compact(path),
+        "席 (階-列-番)": key,
+        "キャンセル": "キャンセル済み" if bool(g.iloc[-1].get("_is_cancel", False)) else "-",
+        "経緯": chain_compact(path),
         "最終所有者": final_owner,
         "最終購入日時": last_dt_str,
     })
