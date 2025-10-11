@@ -3,7 +3,7 @@ import streamlit as st
 import re
 
 st.set_page_config(page_title="teket 座席 最終状態サマリ", layout="centered")
-st.title("teket 販売履歴｜座席ごとの最終状態サマリ")
+st.title("teket 販売履歴｜座席ごとの最終状態サマリ（列・番2桁表示）")
 
 def try_read_csv(file):
     for enc in ["cp932", "utf-8-sig", "utf-8"]:
@@ -48,7 +48,17 @@ def build_chain(rows, actor_col, partner_col, status_col):
         if not dedup or dedup[-1] != name:
             dedup.append(name)
     final_owner = dedup[-1] if dedup else (current or "")
-    return " → ".join(dedup) if dedup else "", final_owner
+    # 「→」を「 -> 」に統一
+    return " -> ".join(dedup) if dedup else "", final_owner
+
+def format_seat(x):
+    s = str(x)
+    m = re.search(r"(\d+)\D+(\d+)", s)
+    if not m:
+        return s.strip()
+    col = f"{int(m.group(1)):02d}"
+    num = f"{int(m.group(2)):02d}"
+    return f"{col}-{num}"
 
 f = st.file_uploader("teket CSV (販売履歴) をアップロード", type=["csv"])
 if not f:
@@ -57,24 +67,13 @@ if not f:
 
 df = try_read_csv(f)
 
-# 列名推測
 seat_col     = guess_col(df.columns, ["席", "座席", "座席番号", "席情報", "チケット"])
 time_col     = guess_col(df.columns, ["購入日時"])  # 固定
 status_col   = guess_col(df.columns, ["処理", "ステータス", "状態"])
 owner_col    = guess_col(df.columns, ["購入者", "所有者", "名義", "注文者"])
 partner_col  = guess_col(df.columns, ["譲渡先", "受取者", "相手", "受領者", "譲渡相手"])
 
-def extract_seat_token(x):
-    s = str(x)
-    m = re.search(r"(\d+)\D+(\d+)", s)
-    if m:
-        return f"{m.group(1)}-{m.group(2)}"
-    return s
-
-seat_id = df[seat_col].copy()
-if seat_col == "チケット":
-    seat_id = df[seat_col].map(extract_seat_token)
-
+seat_id = df[seat_col].map(format_seat)
 work = df.copy()
 work["_seat_id_"] = seat_id
 work["_ts_"] = normalize_datetime(work[time_col])
@@ -100,7 +99,7 @@ for seat, rows in work.groupby("_seat_id_", dropna=False):
         "席": seat,
         "種別": seat_class,
         "最終状態": status_last,
-        "キャンセル": "✅ キャンセル済" if canceled else "✔︎ 有効",
+        "キャンセル": "キャンセル済み" if canceled else "-",
         "譲渡経路": chain if chain else str(rows.iloc[0].get(owner_col, "")),
         "最終所有者": final_owner if final_owner else str(rows.iloc[-1].get(owner_col, "")),
         "最終受取日時": final_receive_at
