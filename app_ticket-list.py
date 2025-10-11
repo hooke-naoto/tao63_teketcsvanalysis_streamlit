@@ -13,7 +13,7 @@ import pandas as pd
 import streamlit as st
 
 st.set_page_config(page_title="teket 席ごとの最終状態サマリ", layout="wide")
-st.title("teket 販売履歴 → 席ごと最終状態サマリ（購入日時ベース・L/R対応）")
+st.title("teket 販売履歴 → 席ごと最終状態サマリ")
 
 def read_csv_any(f):
     for enc in ("cp932", "utf-8-sig", "utf-8"):
@@ -181,7 +181,7 @@ st.dataframe(out[show_cols], use_container_width=True, hide_index=True)
 st.download_button(
     "席ごとの最終状態CSVをダウンロード",
     data=out[show_cols].to_csv(index=False).encode("utf-8-sig"),
-    file_name="teket_席ごと最終状態_購入日時_LR対応.csv",
+    file_name="teket_席ごと最終状態.csv",
     mime="text/csv",
 )
 
