@@ -3,7 +3,7 @@ import streamlit as st
 import re
 
 st.set_page_config(page_title="teket 座席 最終状態サマリ", layout="centered")
-st.title("teket 販売履歴｜座席ごとの最終状態サマリ（階-列-番 表記）")
+st.title("teket 販売履歴｜座席ごとの最終状態サマリ")
 
 def try_read_csv(file):
     for enc in ["cp932", "utf-8-sig", "utf-8"]:
@@ -48,28 +48,20 @@ def build_chain(rows, actor_col, partner_col, status_col):
         if not dedup or dedup[-1] != name:
             dedup.append(name)
     final_owner = dedup[-1] if dedup else (current or "")
-    return " -> ".join(dedup) if dedup else "", final_owner
+    chain_str = " -> ".join(dedup) if dedup else ""
+    return chain_str, final_owner
 
-def format_seat(x):
+def extract_seat_token(x):
     s = str(x)
-    # 「〇階〇列〇番」パターン
-    m3 = re.search(r"(\d+)\D*階.*?(\d+)\D*列.*?(\d+)\D*番", s)
-    if m3:
-        floor = int(m3.group(1))
-        col = int(m3.group(2))
-        num = int(m3.group(3))
-        return f"{floor}-{col:02d}-{num:02d}"
-    # 「〇列〇番」パターン（階なし）
-    m2 = re.search(r"(\d+)\D*列.*?(\d+)\D*番", s)
-    if m2:
-        col = int(m2.group(1))
-        num = int(m2.group(2))
-        return f"0-{col:02d}-{num:02d}"
-    # 「数字-数字」パターン
-    m_simple = re.search(r"(\d+)\D+(\d+)", s)
-    if m_simple:
-        return f"0-{int(m_simple.group(1)):02d}-{int(m_simple.group(2)):02d}"
-    return s.strip()
+    # 「○階△列×番」などを抽出して1-02-12形式に変換
+    m = re.search(r"(\d+)階.*?(\d+)列.*?(\d+)番", s)
+    if m:
+        return f"{int(m.group(1))}-{int(m.group(2)):02d}-{int(m.group(3)):02d}"
+    # 「S席1-12」などを抽出
+    m = re.search(r"(\d+)[^\d]+(\d+)", s)
+    if m:
+        return f"1-{int(m.group(1)):02d}-{int(m.group(2)):02d}"
+    return s
 
 f = st.file_uploader("teket CSV (販売履歴) をアップロード", type=["csv"])
 if not f:
@@ -78,14 +70,14 @@ if not f:
 
 df = try_read_csv(f)
 
+# 列名推測
 seat_col     = guess_col(df.columns, ["席", "座席", "座席番号", "席情報", "チケット"])
-time_col     = guess_col(df.columns, ["購入日時"])  # 固定
+time_col     = guess_col(df.columns, ["購入日時"])
 status_col   = guess_col(df.columns, ["処理", "ステータス", "状態"])
 owner_col    = guess_col(df.columns, ["購入者", "所有者", "名義", "注文者"])
 partner_col  = guess_col(df.columns, ["譲渡先", "受取者", "相手", "受領者", "譲渡相手"])
 
-# 階-列-番フォーマットに統一
-seat_id = df[seat_col].map(format_seat)
+seat_id = df[seat_col].map(extract_seat_token)
 work = df.copy()
 work["_seat_id_"] = seat_id
 work["_ts_"] = normalize_datetime(work[time_col])
